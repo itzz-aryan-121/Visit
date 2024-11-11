@@ -25,7 +25,7 @@ function Data() {
 
   const handleDeleteButtonClick = (id) => {
     
-    fetch(`http://localhost:5000/Delete/${id}`, {
+    fetch(`http://localhost:6001/Delete/${id}`, {
       method: 'delete',
       headers: {
         'Content-Type': 'application/json',
@@ -47,7 +47,7 @@ function Data() {
 
   const fetchData = () => {
     axios
-      .get('http://localhost:5000/api/data')
+      .get('http://localhost:6001/api/data')
       .then((response) => {
         setData(response.data);
       })

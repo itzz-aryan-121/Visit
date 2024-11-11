@@ -12,7 +12,7 @@ function Update(props) {
 	const handleOnSubmit = async (e) => {
 		e.preventDefault();
 		let result = await fetch(
-		'http://localhost:5000/update', {
+		'http://localhost:6001/update', {
 			method: "put",
 			body: JSON.stringify({id, name, email }),
 			headers: {

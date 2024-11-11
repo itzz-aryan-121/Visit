@@ -1,6 +1,6 @@
-
+const nodemailer = require('nodemailer');
 const mongoose = require('mongoose');
-mongoose.connect('add your atlas mongo uri', {
+mongoose.connect('mongodb://localhost:27017/visit-app', {
 	
 	useNewUrlParser: true,
 	useUnifiedTopology: true
@@ -15,19 +15,24 @@ mongoose.connect('add your atlas mongo uri', {
 
 const UserSchema = new mongoose.Schema({
 	name: {
-		type: String,
-		required: true,
+	  type: String,
+	  required: true,
 	},
 	email: {
-		type: String,
-		required: true,
-		unique: true,
+	  type: String,
+	  required: true,
+	  unique: true,
+	},
+	approved: {
+	  type: Boolean,
+	  default: null,
 	},
 	date: {
-		type: Date,
-		default: Date.now,
+	  type: Date,
+	  default: Date.now,
 	},
-});
+  });
+  
 const User = mongoose.model('users', UserSchema);
 User.createIndexes();
 
@@ -35,7 +40,7 @@ User.createIndexes();
 const express = require('express');
 const app = express();
 const cors = require("cors");
-console.log("App listen at port 5000");
+console.log("App listen at port 6001");
 app.use(express.json());
 app.use(cors());
 app.get("/", (req, resp) => {
@@ -44,25 +49,114 @@ app.get("/", (req, resp) => {
 	
 });
 
+const transporter = nodemailer.createTransport({
+	service: 'gmail',
+	auth: {
+	  user: 'aryantomar239@gmail.com',
+	  pass: 'bawn atug muom xugd'
+	}
+  });
+
+// backend/index.js
 app.post("/register", async (req, resp) => {
 	try {
-		const user = new User(req.body);
-		let result = await user.save();
-		result = result.toObject();
-		if (result) {
-			delete result.password;
-			resp.send(req.body);
-			console.log(result);
-		} else {
-			console.log("User already register");
-		}
-
+		const { name, email, recipientEmail } = req.body;
+	  const user = new User(req.body);
+	  let result = await user.save();
+	  result = result.toObject();
+	  if (result) {
+		delete result.password;
+		resp.json(req.body);
+		console.log(result);
+  
+		// Send email to recipient
+		const mailOptions = {
+		  from: 'your-email@gmail.com',
+		  to: recipientEmail,
+		  subject: 'New User Registration',
+		  html: `
+			<p>A new user has registered.</p>
+			<p>Name: ${result.name}</p>
+			<p>Email: ${result.email}</p>
+			<p>
+			  <a href="http://localhost:6001/approve/${result._id}">Approve</a> |
+			  <a href="http://localhost:6001/disapprove/${result._id}">Disapprove</a>
+			</p>
+		  `
+		};
+  
+		transporter.sendMail(mailOptions, (error, info) => {
+		  if (error) {
+			console.log(error);
+		  } else {
+			console.log('Email sent: ' + info.response);
+		  }
+		});
+	  } else {
+		console.log("User already registered");
+	  }
 	} catch (e) {
-		resp.send("Something Went Wrong");
+	  resp.status(500).json({ error: "Something Went Wrong" });
 	}
-});
+  });
+  
+  app.put('/approve/:id', async (req, res) => {
+	try {
+	  const { id } = req.params;
+	  const updatedUser = await User.findByIdAndUpdate(id, { approved: true }, { new: true });
+  
+	  if (updatedUser) {
+		res.json(updatedUser);
+	  } else {
+		res.status(404).json({ error: 'User not found' });
+	  }
+	} catch (error) {
+	  res.status(500).json({ error: 'Something went wrong' });
+	}
+  });
+  app.get('/approve/:id', async (req, res) => {
+	try {
+	  const { id } = req.params;
+	  const updatedUser = await User.findByIdAndUpdate(id, { approved: true }, { new: true });
+  
+	  if (updatedUser) {
+		res.send('User approved successfully.');
+	  } else {
+		res.status(404).send('User not found.');
+	  }
+	} catch (error) {
+	  res.status(500).send('Something went wrong.');
+	}
+  });
+  app.get('/disapprove/:id', async (req, res) => {
+	try {
+	  const { id } = req.params;
+	  const updatedUser = await User.findByIdAndUpdate(id, { approved: false }, { new: true });
+  
+	  if (updatedUser) {
+		res.send('User disapproved successfully.');
+	  } else {
+		res.status(404).send('User not found.');
+	  }
+	} catch (error) {
+	  res.status(500).send('Something went wrong.');
+	}
+  });
 
-
+  app.put('/disapprove/:id', async (req, res) => {
+	try {
+	  const { id } = req.params;
+	  const updatedUser = await User.findByIdAndUpdate(id, { approved: false }, { new: true });
+  
+	  if (updatedUser) {
+		res.json(updatedUser);
+	  } else {
+		res.status(404).json({ error: 'User not found' });
+	  }
+	} catch (error) {
+	  res.status(500).json({ error: 'Something went wrong' });
+	}
+  });
 app.put('/update', async (req, res) => {
 	try {
 	  const { id, name, email } = req.body;
@@ -78,6 +172,11 @@ app.put('/update', async (req, res) => {
 	  res.status(500).json({ error: 'Something went wrong' });
 	}
   });
+
+  // backend/index.js
+// backend/index.js
+  
+
 
 
 
@@ -117,4 +216,4 @@ app.get('/api/data', async (req, res) => {
 
 
 
-app.listen(5000);
+app.listen(6001);
